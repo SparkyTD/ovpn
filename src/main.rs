@@ -14,6 +14,7 @@ mod socket_manager;
 mod socket_server;
 mod command;
 mod response;
+mod command_handler;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,7 +22,7 @@ async fn main() -> Result<()> {
     SimpleLogger::new().init()?;
 
     // Create app state
-    let mut app_state = AppState::new();
+    let mut app_state = AppState::new().await;
 
     // Start the server
     app_state.socket_server.start(Arc::clone(&app_state)).await?;

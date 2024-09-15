@@ -15,14 +15,21 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new() -> Arc<AppState> {
+    pub async fn new() -> Arc<AppState> {
         Arc::new(Self {
             active_session: Arc::new(RwLock::new(None)),
-            config_manager: ConfigManager::new(),
+            config_manager: ConfigManager::new().await.expect("Failed to load the config manager"),
             session_manager: SessionManager::new(),
             socket_manager: Arc::new(Mutex::new(SocketManager::new())),
             socket_server: SocketServer::new(),
         })
+    }
+
+    pub async fn has_active_session(&self) -> bool {
+        match self.active_session.read().await.as_ref() {
+            Some(_) => true,
+            None => false,
+        }
     }
 }
 

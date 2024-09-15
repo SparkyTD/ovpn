@@ -7,6 +7,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::{Mutex, RwLock};
 use crate::command::Cli;
+use crate::command_handler::CommandHandler;
 use crate::paths::SOCKET_PATH;
 use crate::response::Response;
 use crate::state::AppState;
@@ -71,7 +72,7 @@ impl SocketServer {
                     let response: Option<Response> = match Cli::try_parse_from(args) {
                         Ok(command) => {
                             let app_state = app_state.clone();
-                            SocketServer::handle_command(command, app_state).await.unwrap_or_else(|error| None)
+                            CommandHandler::handle_command(command, app_state).await.unwrap_or_else(|error| None)
                         },
                         Err(_) => Some(Response::fail("Invalid command".to_string()))
                     };
@@ -90,9 +91,5 @@ impl SocketServer {
                 }
             }
         }
-    }
-
-    async fn handle_command(command: Cli, app_state: Arc<AppState>) -> Result<Option<Response>> {
-        Ok(Some(Response::success("yey2".to_string())))
     }
 }
