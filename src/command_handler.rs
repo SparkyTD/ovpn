@@ -28,9 +28,8 @@ impl CommandHandler {
 
                     match app_state.config_manager.get_by_name(name).await {
                         Ok(config_entry) => {
-                            match app_state.session_manager.start(config_entry).await {
-                                Ok(session) => {
-                                    *app_state.active_session.write().await = Some(session);
+                            match app_state.session_manager.start(config_entry, app_state.clone()).await {
+                                Ok(_) => {
                                     Ok(Some(Response::success("Session started successfully".to_string())))
                                 }
                                 Err(_) => Ok(Some(Response::fail("Failed to start the session".to_string()))),

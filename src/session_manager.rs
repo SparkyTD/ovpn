@@ -20,7 +20,7 @@ pub struct SessionManager {}
 impl SessionManager {
     pub fn new() -> SessionManager { Self {} }
 
-    pub async fn start(&self, config: Box<ConfigEntry>) -> Result<Session> {
+    pub async fn start(&self, config: Box<ConfigEntry>, app_state: Arc<AppState>) -> Result<()> {
         let config_path = ConfigManager::get_config_path(config.clone().as_ref());
         let mut command = Command::new(OPENVPN_PATH);
         command.arg("--config");
@@ -50,7 +50,11 @@ impl SessionManager {
 
         info!("Child process has been started (PID: {})", process_id);
 
-        Ok(session)
+        *app_state.active_session.write().await = Some(session);
+
+        // TODO Post 'Starting'
+
+        Ok(())
     }
 
     pub async fn stop(&self, app_state: Arc<AppState>) -> Result<()> {
