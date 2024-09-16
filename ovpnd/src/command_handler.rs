@@ -1,6 +1,6 @@
 use std::path::Path;
 use std::sync::Arc;
-use crate::command::{Cli, Commands, ConfigCommand, SessionCommand};
+use common::command::{Cli, Commands, ConfigCommand, SessionCommand};
 use crate::config::ConfigManager;
 use crate::response::Response;
 use crate::state::AppState;

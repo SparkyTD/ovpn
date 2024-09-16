@@ -4,9 +4,9 @@ use clap::{Parser};
 use log::{error, info};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
-use crate::command::Cli;
+use common::command::Cli;
 use crate::command_handler::CommandHandler;
-use crate::paths::SOCKET_PATH;
+use common::paths::SOCKET_PATH;
 use crate::response::Response;
 use crate::state::AppState;
 

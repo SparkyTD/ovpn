@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use anyhow::{anyhow, Result};
 use tokio::fs;
 use uuid::Uuid;
-use crate::paths::CONFIGS_PATH;
+use common::paths::CONFIGS_PATH;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ConfigEntry {

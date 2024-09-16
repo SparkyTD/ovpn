@@ -7,11 +7,9 @@ mod state;
 mod config;
 mod session;
 mod session_manager;
-mod paths;
 mod socket_client;
 mod socket_manager;
 mod socket_server;
-mod command;
 mod response;
 mod command_handler;
 

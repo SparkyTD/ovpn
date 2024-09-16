@@ -11,7 +11,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::RwLock;
 use tokio::time::timeout;
-use crate::paths::OPENVPN_PATH;
+use common::paths::OPENVPN_PATH;
 use crate::session::{Session, SessionStatus};
 use crate::session::SessionStatus::Stopping;
 use crate::state::AppState;
