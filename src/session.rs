@@ -12,7 +12,7 @@ pub enum SessionStatus {
     Running = 1 << 1,
     Stopping = 1 << 2,
     Stopped = 1 << 3,
-    Crashed = (1 << 4) | (1 << 3),
+    // Crashed = (1 << 4) | (1 << 3),
 }
 
 pub struct Session {

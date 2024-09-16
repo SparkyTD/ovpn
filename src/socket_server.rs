@@ -91,7 +91,7 @@ impl SocketServer {
         }
 
         let mut socket_manager = app_state.socket_manager.lock().await;
-        let mut client = client.lock().await;
+        let client = client.lock().await;
         socket_manager.remove_client(client.id).await;
         drop(socket_manager);
     }
