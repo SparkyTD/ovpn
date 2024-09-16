@@ -1,9 +1,12 @@
+use std::fs::Permissions;
 use anyhow::Result;
 use std::sync::Arc;
 use clap::{Parser};
 use log::{error, info};
+use tokio::fs;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
+use std::os::unix::fs::PermissionsExt;
 use common::command::Cli;
 use crate::command_handler::CommandHandler;
 use common::paths::SOCKET_PATH;
@@ -19,9 +22,10 @@ impl SocketServer {
     }
 
     pub async fn start(&self, app_state: Arc<AppState>) -> Result<()> {
-        let _ = std::fs::remove_file(SOCKET_PATH);
+        _ = fs::remove_file(SOCKET_PATH).await;
 
         let listener = UnixListener::bind(SOCKET_PATH)?;
+        fs::set_permissions(SOCKET_PATH, Permissions::from_mode(0o777)).await?;
 
         info!("Socket listener started, listening on {}", SOCKET_PATH);
 

@@ -1,0 +1,37 @@
+[Unit]
+Description=OpenVPN Daemon Service
+After=network.target
+
+[Service]
+# Path to the ovpnd binary
+ExecStart=/usr/bin/ovpnd
+
+# Reload signal
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart on failure
+Restart=on-failure
+
+# Run as root to allow dropping to 'nobody'
+User=root
+Group=root
+
+# Grant necessary capabilities
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW CAP_SETUID CAP_SETGID
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW CAP_SETUID CAP_SETGID
+
+# Ensure that capabilities are retained after dropping privileges
+# Do not set NoNewPrivileges (defaults to false)
+
+# Environment variables (if needed)
+# Environment=KEY=value
+
+# Adjust the permissions of the socket file after starting
+# ExecStartPost=/bin/chmod 666 /run/ovpnd-daemon.sock
+
+# Standard output and error handling
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
