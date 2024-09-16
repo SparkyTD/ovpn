@@ -1,11 +1,9 @@
 use anyhow::Result;
 use std::sync::Arc;
-use clap::{Error, Parser};
-use futures::SinkExt;
+use clap::{Parser};
 use log::{error, info};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
-use tokio::sync::{Mutex, RwLock};
 use crate::command::Cli;
 use crate::command_handler::CommandHandler;
 use crate::paths::SOCKET_PATH;
@@ -51,7 +49,7 @@ impl SocketServer {
         let mut line = String::new();
 
         let mut socket_manager = app_state.socket_manager.lock().await;
-        let mut client = socket_manager.add_client(writer);
+        let client = socket_manager.add_client(writer).await;
         drop(socket_manager);
 
         loop {
@@ -72,7 +70,7 @@ impl SocketServer {
                     let response: Option<Response> = match Cli::try_parse_from(args) {
                         Ok(command) => {
                             let app_state = app_state.clone();
-                            CommandHandler::handle_command(command, app_state).await.unwrap_or_else(|error| None)
+                            CommandHandler::handle_command(command, app_state).await.unwrap_or_else(|_| None)
                         },
                         Err(_) => Some(Response::fail("Invalid command".to_string()))
                     };
@@ -91,5 +89,10 @@ impl SocketServer {
                 }
             }
         }
+
+        let mut socket_manager = app_state.socket_manager.lock().await;
+        let mut client = client.lock().await;
+        socket_manager.remove_client(client.id).await;
+        drop(socket_manager);
     }
 }

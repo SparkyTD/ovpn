@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use std::sync::Arc;
 use anyhow::Result;
 use simple_logger::SimpleLogger;
@@ -22,7 +21,7 @@ async fn main() -> Result<()> {
     SimpleLogger::new().init()?;
 
     // Create app state
-    let mut app_state = AppState::new().await;
+    let app_state = AppState::new().await;
 
     // Start the server
     app_state.socket_server.start(Arc::clone(&app_state)).await?;

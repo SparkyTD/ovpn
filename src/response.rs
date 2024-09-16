@@ -24,10 +24,3 @@ impl std::fmt::Display for Response {
         }, self.message);
     }
 }
-
-impl Response {
-    pub fn length_prefixed_string(&self) -> String {
-        let string = self.to_string();
-        return format!("{}:{}\n", string.len(), string);
-    }
-}

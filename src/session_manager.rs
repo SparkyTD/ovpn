@@ -1,4 +1,3 @@
-use std::future::Future;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
@@ -6,13 +5,11 @@ use crate::config::{ConfigEntry, ConfigManager};
 use anyhow::{Context, Result};
 use chrono::{Utc};
 use log::{error, info};
-use nix::libc::{stack_t, stat, waitpid};
 use nix::sys::{signal, wait};
 use nix::unistd::Pid;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::RwLock;
-use tokio::task;
 use tokio::time::timeout;
 use crate::paths::OPENVPN_PATH;
 use crate::session::{Session, SessionStatus};
@@ -65,7 +62,7 @@ impl SessionManager {
 
     pub async fn stop(&self, app_state: Arc<AppState>) -> Result<()> {
         let active_session_guard = app_state.active_session.read().await;
-        let mut active_session = active_session_guard.as_ref().unwrap();
+        let active_session = active_session_guard.as_ref().unwrap();
         {
             let mut child_process = active_session.process.write().await;
             let pid = child_process.id().context("Failed to get process id")?;
@@ -105,27 +102,33 @@ impl SessionManager {
         let stdout = process.stdout.take()
             .context("Failed to get stdout from child process")?;
         let mut reader = BufReader::new(stdout).lines();
+        let app_state_clone = Arc::clone(&app_state);
         tokio::spawn(async move {
             while let Some(line) = reader.next_line().await.unwrap_or(None) {
-                println!("OUT >> {}", line);
+                // println!("OUT >> {}", line);
+
+                if line.contains("Initialization Sequence Completed") {
+                    SessionManager::update_active_session(app_state_clone.clone(), SessionStatus::Running).await
+                        .expect("Failed to change the status of the active session");
+                }
             }
         });
 
-        let stderr = process.stderr.take()
+        /*let stderr = process.stderr.take()
             .context("Failed to get stderr from child process")?;
         let mut reader = BufReader::new(stderr).lines();
         tokio::spawn(async move {
             while let Some(line) = reader.next_line().await.unwrap_or(None) {
                 println!("ERR >> {}", line);
             }
-        });
+        });*/
 
-        let app_state = Arc::clone(&app_state);
+        let app_state_clone = Arc::clone(&app_state);
         tokio::spawn(async move {
             let pid = Pid::from_raw(pid as i32);
             match wait::waitpid(pid, None) {
                 Ok(_) => {
-                    let app_state_clone = app_state.clone();
+                    let app_state_clone = app_state_clone.clone();
                     let active_session_guard = app_state_clone.active_session.read().await;
                     let active_session = active_session_guard.as_ref().unwrap();
                     let status = active_session.status.read().await;
@@ -136,9 +139,9 @@ impl SessionManager {
                     drop(status);
                     drop(active_session_guard);
 
-                    SessionManager::update_active_session(app_state.clone(), SessionStatus::Stopped).await
+                    SessionManager::update_active_session(app_state_clone.clone(), SessionStatus::Stopped).await
                         .expect("Failed to change the status of the active session");
-                    *app_state.active_session.write().await = None;
+                    *app_state_clone.active_session.write().await = None;
                     println!(">>> Process has exited")
                 }
                 Err(_) => error!("Failed to wait for process"),
@@ -153,11 +156,11 @@ impl SessionManager {
         let active_session = app_state_clone.active_session.read().await;
         *(*active_session).as_ref().unwrap().status.write().await = status;
 
-        /*let app_state_clone = Arc::clone(&app_state);
+        let app_state_clone = Arc::clone(&app_state);
         let active_session = (*active_session).as_ref().unwrap().to_serializable().await;
         let mut socket_manager = app_state_clone.socket_manager.lock().await;
         socket_manager.broadcast_status_change(&active_session).await
-            .expect("Failed to broadcast status change");*/
+            .expect("Failed to broadcast status change");
 
         Ok(())
     }

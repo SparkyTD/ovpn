@@ -1,8 +1,6 @@
-use std::ops::Deref;
 use std::sync::Arc;
 use crate::command::{Cli, Commands, ConfigCommand, SessionCommand};
 use crate::response::Response;
-use crate::session::Session;
 use crate::state::AppState;
 
 pub struct CommandHandler {}

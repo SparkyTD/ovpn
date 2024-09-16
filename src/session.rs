@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Serializer};
+use serde::{Serialize};
 use tokio::process::Child;
 use tokio::sync::RwLock;
 use crate::config::ConfigEntry;
@@ -22,7 +22,7 @@ pub struct Session {
     pub process: Arc<RwLock<Child>>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct SerializableSession {
     pub config: ConfigEntry,
 
