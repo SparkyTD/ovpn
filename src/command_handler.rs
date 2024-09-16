@@ -51,7 +51,7 @@ impl CommandHandler {
                 SessionCommand::Status => {
                     let active_session_guard = app_state.active_session.read().await;
                     match active_session_guard.as_ref() {
-                        Some(session) => Ok(Some(Response::success(serde_json::to_string_pretty(&session)?))),
+                        Some(session) => Ok(Some(Response::success(serde_json::to_string_pretty(&session.to_serializable().await)?))),
                         None => Ok(Some(Response::success("No active sessions".to_string())))
                     }
                 }

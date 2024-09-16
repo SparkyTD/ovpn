@@ -6,10 +6,13 @@ use crate::config::{ConfigEntry, ConfigManager};
 use anyhow::{Context, Result};
 use chrono::{Utc};
 use log::{error, info};
-use nix::sys::signal;
+use nix::libc::{stat, waitpid};
+use nix::sys::{signal, wait};
 use nix::unistd::Pid;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::RwLock;
+use tokio::task;
 use tokio::time::timeout;
 use crate::paths::OPENVPN_PATH;
 use crate::session::{Session, SessionStatus};
@@ -51,14 +54,15 @@ impl SessionManager {
         info!("Child process has been started (PID: {})", process_id);
 
         *app_state.active_session.write().await = Some(session);
+        SessionManager::update_active_session(app_state.clone(), SessionStatus::Starting).await
+            .expect("Failed to change the status of the active session");
 
-        // TODO Post 'Starting'
+        self.start_monitoring_process(app_state.clone()).await?;
 
         Ok(())
     }
 
     pub async fn stop(&self, app_state: Arc<AppState>) -> Result<()> {
-
         let active_session_guard = app_state.active_session.read().await;
         let mut active_session = active_session_guard.as_ref().unwrap();
         {
@@ -66,7 +70,8 @@ impl SessionManager {
             let pid = child_process.id().context("Failed to get process id")?;
             let pid = Pid::from_raw(pid as i32);
 
-            // TODO Post 'Stopping'
+            SessionManager::update_active_session(app_state.clone(), SessionStatus::Stopping).await
+                .expect("Failed to change the status of the active session");
 
             signal::kill(Pid::from_raw(-pid.as_raw()), signal::Signal::SIGINT)
                 .context("Failed to send SIGINT to process")?;
@@ -82,9 +87,59 @@ impl SessionManager {
         }
         drop(active_session_guard);
 
-        // TODO Post 'Stopped'
+        SessionManager::update_active_session(app_state.clone(), SessionStatus::Stopped).await
+            .expect("Failed to change the status of the active session");
 
         *app_state.active_session.write().await = None;
+
+        Ok(())
+    }
+
+    async fn start_monitoring_process(&self, app_state: Arc<AppState>) -> Result<()> {
+        let active_session_guard = app_state.active_session.read().await;
+        let active_session = active_session_guard.as_ref().unwrap();
+        let mut process = active_session.process.write().await;
+        let pid = process.id().context("Failed to get process id")?;
+
+        let stdout = process.stdout.take()
+            .context("Failed to get stdout from child process")?;
+        let mut reader = BufReader::new(stdout).lines();
+        tokio::spawn(async move {
+            while let Some(line) = reader.next_line().await.unwrap_or(None) {
+                println!("OUT >> {}", line);
+            }
+        });
+
+        let stderr = process.stderr.take()
+            .context("Failed to get stderr from child process")?;
+        let mut reader = BufReader::new(stderr).lines();
+        tokio::spawn(async move {
+            while let Some(line) = reader.next_line().await.unwrap_or(None) {
+                println!("ERR >> {}", line);
+            }
+        });
+
+        let app_state = Arc::clone(&app_state);
+        tokio::spawn(async move {
+            let pid = Pid::from_raw(pid as i32);
+            match wait::waitpid(pid, None) {
+                Ok(_) => {
+                    SessionManager::update_active_session(app_state.clone(), SessionStatus::Stopped).await
+                        .expect("Failed to change the status of the active session");
+                    *app_state.active_session.write().await = None;
+                    println!(">>> Process has exited")
+                },
+                Err(_) => error!("Failed to wait for process"),
+            }
+        });
+
+        Ok(())
+    }
+
+    async fn update_active_session(app_state: Arc<AppState>, status: SessionStatus) -> Result<()> {
+        let app_state = app_state.active_session.read().await;
+        *(*app_state).as_ref().unwrap().status.write().await = status;
+
         Ok(())
     }
 }
