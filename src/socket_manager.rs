@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::net::unix::OwnedWriteHalf;
 use tokio::sync::Mutex;
+use anyhow::Result;
+use crate::session::SerializableSession;
 use crate::socket_client::SocketClient;
 
 pub struct SocketManager {
@@ -28,5 +30,10 @@ impl SocketManager {
         self.last_client_id = client_id;
 
         return socket_client;
+    }
+
+    pub async fn broadcast_status_change(&mut self, session: &SerializableSession) -> Result<()> {
+        println!("Broadcast!");
+        Ok(())
     }
 }

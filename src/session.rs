@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 use crate::config::ConfigEntry;
 use chrono::serde::ts_seconds;
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, PartialEq)]
 pub enum SessionStatus {
     Starting = 1 << 0,
     Running = 1 << 1,

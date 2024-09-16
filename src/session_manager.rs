@@ -6,7 +6,7 @@ use crate::config::{ConfigEntry, ConfigManager};
 use anyhow::{Context, Result};
 use chrono::{Utc};
 use log::{error, info};
-use nix::libc::{stat, waitpid};
+use nix::libc::{stack_t, stat, waitpid};
 use nix::sys::{signal, wait};
 use nix::unistd::Pid;
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -16,6 +16,7 @@ use tokio::task;
 use tokio::time::timeout;
 use crate::paths::OPENVPN_PATH;
 use crate::session::{Session, SessionStatus};
+use crate::session::SessionStatus::Stopping;
 use crate::state::AppState;
 
 pub struct SessionManager {}
@@ -124,11 +125,22 @@ impl SessionManager {
             let pid = Pid::from_raw(pid as i32);
             match wait::waitpid(pid, None) {
                 Ok(_) => {
+                    let app_state_clone = app_state.clone();
+                    let active_session_guard = app_state_clone.active_session.read().await;
+                    let active_session = active_session_guard.as_ref().unwrap();
+                    let status = active_session.status.read().await;
+                    if status.clone() == Stopping {
+                        println!("The process was stopped by the daemon, skipping exit handling");
+                        return;
+                    }
+                    drop(status);
+                    drop(active_session_guard);
+
                     SessionManager::update_active_session(app_state.clone(), SessionStatus::Stopped).await
                         .expect("Failed to change the status of the active session");
                     *app_state.active_session.write().await = None;
                     println!(">>> Process has exited")
-                },
+                }
                 Err(_) => error!("Failed to wait for process"),
             }
         });
@@ -137,8 +149,15 @@ impl SessionManager {
     }
 
     async fn update_active_session(app_state: Arc<AppState>, status: SessionStatus) -> Result<()> {
-        let app_state = app_state.active_session.read().await;
-        *(*app_state).as_ref().unwrap().status.write().await = status;
+        let app_state_clone = Arc::clone(&app_state);
+        let active_session = app_state_clone.active_session.read().await;
+        *(*active_session).as_ref().unwrap().status.write().await = status;
+
+        /*let app_state_clone = Arc::clone(&app_state);
+        let active_session = (*active_session).as_ref().unwrap().to_serializable().await;
+        let mut socket_manager = app_state_clone.socket_manager.lock().await;
+        socket_manager.broadcast_status_change(&active_session).await
+            .expect("Failed to broadcast status change");*/
 
         Ok(())
     }
