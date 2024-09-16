@@ -105,7 +105,7 @@ impl SessionManager {
         let app_state_clone = Arc::clone(&app_state);
         tokio::spawn(async move {
             while let Some(line) = reader.next_line().await.unwrap_or(None) {
-                // println!("OUT >> {}", line);
+                println!("OUT >> {}", line);
 
                 if line.contains("Initialization Sequence Completed") {
                     SessionManager::update_active_session(app_state_clone.clone(), SessionStatus::Running).await
@@ -114,14 +114,14 @@ impl SessionManager {
             }
         });
 
-        /*let stderr = process.stderr.take()
+        let stderr = process.stderr.take()
             .context("Failed to get stderr from child process")?;
         let mut reader = BufReader::new(stderr).lines();
         tokio::spawn(async move {
             while let Some(line) = reader.next_line().await.unwrap_or(None) {
                 println!("ERR >> {}", line);
             }
-        });*/
+        });
 
         let app_state_clone = Arc::clone(&app_state);
         tokio::spawn(async move {

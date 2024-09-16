@@ -10,7 +10,9 @@ pub struct SocketClient {
 
 impl SocketClient {
     pub async fn send_response(&mut self, response: Response) -> anyhow::Result<()> {
-        self.writer.write_all((response.to_string() + "\n").as_bytes()).await.map_err(anyhow::Error::from)
+        let message = response.to_string();
+        let message = format!("{}:{}\n", message.len(), message);
+        self.writer.write_all(message.as_bytes()).await.map_err(anyhow::Error::from)
     }
 
     pub async fn send_status_update(&mut self, session: &SerializableSession) -> anyhow::Result<()> {
